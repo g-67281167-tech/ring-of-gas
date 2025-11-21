@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Law Interactive Diagram</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 28px;
+        }
+
+        .diagram-container {
+            position: relative;
+            width: 700px;
+            height: 700px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 10px;
+        }
+
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(100, 100, 100, 0.3);
+            border-radius: 50%;
+            animation: float 4s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(15px, -15px); }
+            50% { transform: translate(-15px, 15px); }
+            75% { transform: translate(15px, 15px); }
+        }
+
+        .particle.fast {
+            animation-duration: 1s;
+            background: rgba(255, 100, 50, 0.5);
+        }
+
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hex-element {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .hex-element:hover {
+            filter: brightness(1.15);
+        }
+
+        .hex-element.active {
+            filter: brightness(1.25) drop-shadow(0 0 20px rgba(255,255,255,0.9));
+        }
+
+        .hex-element.dimmed {
+            opacity: 0.25;
+        }
+
+        .intersection-text {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .intersection-text:hover {
+            filter: brightness(1.1);
+        }
+
+        .intersection-text.active {
+            filter: brightness(1.2) drop-shadow(0 0 8px rgba(0,0,0,0.4));
+        }
+
+        .intersection-text.dimmed {
+            opacity: 0.25;
+        }
+
+        .label-text {
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .top-label {
+            text-align: center;
+            color: #8bc34a;
+            font-weight: bold;
+            font-size: 17px;
+            margin-bottom: 5px;
+        }
+
+        .top-sublabel {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .formula-popup {
+            position: fixed;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            max-width: 420px;
+            z-index: 100;
+            border: 2px solid #ddd;
+        }
+
+        .formula-popup.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .formula-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .formula-item {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+        }
+
+        .formula-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .formula-equation {
+            font-size: 20px;
+            font-family: 'Courier New', monospace;
+            color: #555;
+            margin: 8px 0;
+        }
+
+        .formula-description {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .graph-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .graph-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .graph-svg {
+            width: 100%;
+            height: 200px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        @keyframes drawLine {
+            from {
+                stroke-dashoffset: 1000;
+            }
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .animated-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawLine 2s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in forwards;
+        }
+
+        .instructions {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Unifying Gas Law Relationships</h1>
+        
+        <div class="top-label">Boyle's Law</div>
+        <div class="top-sublabel">Inverse pressure-volume relation</div>
+        
+        <div class="diagram-container">
+            <div class="particles" id="particles"></div>
+            
+            <svg viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg">
+                <!-- Pressure Hexagon (Blue - Top Left) - OVERLAPPING -->
+                <g class="hex-element" id="pressure-hex" data-var="pressure">
+                    <polygon points="250,180 370,245 370,375 250,440 130,375 130,245" 
+                             fill="rgba(99, 133, 230, 0.5)" 
+                             stroke="rgb(99, 133, 230)" 
+                             stroke-width="4"/>
+                </g>
+                
+                <!-- Volume Hexagon (Green - Top Right) - OVERLAPPING -->
+                <g class="hex-element" id="volume-hex" data-var="volume">
+                    <polygon points="450,180 570,245 570,375 450,440 330,375 330,245" 
+                             fill="rgba(46, 184, 130, 0.5)" 
+                             stroke="rgb(46, 184, 130)" 
+                             stroke-width="4"/>
+                </g>
+                
+                <!-- Temperature Hexagon (Orange - Bottom) - OVERLAPPING -->
+                <g class="hex-element" id="temperature-hex" data-var="temperature">
+                    <polygon points="350,330 470,395 470,525 350,590 230,525 230,395" 
+                             fill="rgba(237, 137, 54, 0.5)" 
+                             stroke="rgb(237, 137, 54)" 
+                             stroke-width="4"/>
+                </g>
+                
+                <!-- Main Hexagon Icons and Labels -->
+                <text x="190" y="305" font-size="50" text-anchor="middle" fill="white" class="label-text">💨</text>
+                <text x="190" y="350" font-size="16" font-weight="bold" text-anchor="middle" fill="white" class="label-text">Pressure (P)</text>
+                
+                <text x="510" y="305" font-size="50" text-anchor="middle" fill="white" class="label-text">📦</text>
+                <text x="510" y="350" font-size="16" font-weight="bold" text-anchor="middle" fill="white" class="label-text">Volume (V)</text>
+                
+                <text x="350" y="535" font-size="50" text-anchor="middle" fill="white" class="label-text">🌡️</text>
+                <text x="350" y="580" font-size="16" font-weight="bold" text-anchor="middle" fill="white" class="label-text">Temperature (T)</text>
+                
+                <!-- Intersection Labels - Text in Overlapping Areas -->
+                
+                <!-- Boyle's Law - P & V intersection (Top Center) -->
+                <g class="intersection-text" id="boyle-text" data-var="boyle">
+                    <text x="350" y="285" font-size="38" text-anchor="middle" fill="white" font-weight="bold">💡</text>
+                    <text x="350" y="315" font-size="15" font-weight="bold" text-anchor="middle" fill="#333">Boyle's Law</text>
+                </g>
+                
+                <!-- Gay-Lussac's Law - P & T intersection (Bottom Left) -->
+                <g class="intersection-text" id="gay-lussac-text" data-var="gay-lussac">
+                    <text x="270" y="430" font-size="35" text-anchor="middle" fill="white" font-weight="bold">🔥</text>
+                    <text x="270" y="460" font-size="13" font-weight="bold" text-anchor="middle" fill="#333">Gay-Lussac's</text>
+                    <text x="270" y="476" font-size="13" font-weight="bold" text-anchor="middle" fill="#333">Law</text>
+                </g>
+                
+                <!-- Charles's Law - V & T intersection (Bottom Right) -->
+                <g class="intersection-text" id="charles-text" data-var="charles">
+                    <text x="430" y="430" font-size="35" text-anchor="middle" fill="white" font-weight="bold">💡</text>
+                    <text x="430" y="460" font-size="13" font-weight="bold" text-anchor="middle" fill="#333">Charles's Law</text>
+                </g>
+                
+                <!-- Center Icon (All three intersection) -->
+                <text x="350" y="395" font-size="30" text-anchor="middle" fill="rgba(80,80,80,0.5)" class="label-text">⚛️</text>
+                
+                <!-- External Labels -->
+                <text x="70" y="320" font-size="16" font-weight="bold" fill="#6385e6" class="label-text">Pressure (P)</text>
+                <text x="50" y="340" font-size="12" fill="#666" class="label-text">Force exerted by gas</text>
+                
+                <text x="585" y="320" font-size="16" font-weight="bold" fill="#2eb882" class="label-text" text-anchor="start">Volume (V)</text>
+                <text x="585" y="340" font-size="12" fill="#666" class="label-text" text-anchor="start">Space occupied by gas</text>
+                
+                <text x="350" y="640" font-size="16" font-weight="bold" fill="#ed8936" class="label-text" text-anchor="middle">Absolute Temperature (T)</text>
+                <text x="350" y="660" font-size="12" fill="#666" class="label-text" text-anchor="middle">Measure of gas particle energy</text>
+                
+                <!-- Gas Law External Labels -->
+                <text x="175" y="510" font-size="12" fill="#666" class="label-text">Direct pressure-</text>
+                <text x="175" y="525" font-size="12" fill="#666" class="label-text">temperature relation</text>
+                
+                <text x="480" y="500" font-size="12" fill="#666" class="label-text">Direct volume-</text>
+                <text x="480" y="515" font-size="12" fill="#666" class="label-text">temperature relation</text>
+            </svg>
+        </div>
+        
+        <div class="formula-popup" id="formula-popup"></div>
+        
+        <div class="instructions">
+            Klik pada hexagon (P, V, T) atau teks undang-undang gas di kawasan persilangan untuk melihat formula
+        </div>
+    </div>
+
+    <script>
+        const hexElements = document.querySelectorAll('.hex-element');
+        const intersectionTexts = document.querySelectorAll('.intersection-text');
+        const allClickable = [...hexElements, ...intersectionTexts];
+        const popup = document.getElementById('formula-popup');
+        const particles = document.getElementById('particles');
+        let activeElement = null;
+
+        // Create particles
+        for (let i = 0; i < 35; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 4 + 's';
+            particles.appendChild(particle);
+        }
+
+        const formulas = {
+            pressure: {
+                title: 'Pressure (P) - Force Exerted by Gas',
+                color: 'rgb(99, 133, 230)',
+                items: [
+                    {
+                        name: "Dengan Volume (Boyle's Law)",
+                        equation: "P₁V₁ = P₂V₂",
+                        description: "Tekanan dan isipadu adalah songsang berkadaran pada suhu malar"
+                    },
+                    {
+                        name: "Dengan Suhu (Gay-Lussac's Law)",
+                        equation: "P₁/T₁ = P₂/T₂",
+                        description: "Tekanan dan suhu adalah terus berkadaran pada isipadu malar"
+                    }
+                ],
+                showGraph: false
+            },
+            volume: {
+                title: 'Volume (V) - Space Occupied by Gas',
+                color: 'rgb(46, 184, 130)',
+                items: [
+                    {
+                        name: "Dengan Tekanan (Boyle's Law)",
+                        equation: "P₁V₁ = P₂V₂",
+                        description: "Isipadu dan tekanan adalah songsang berkadaran pada suhu malar"
+                    },
+                    {
+                        name: "Dengan Suhu (Charles's Law)",
+                        equation: "V₁/T₁ = V₂/T₂",
+                        description: "Isipadu dan suhu adalah terus berkadaran pada tekanan malar"
+                    }
+                ],
+                showGraph: false
+            },
+            temperature: {
+                title: 'Temperature (T) - Gas Particle Energy',
+                color: 'rgb(237, 137, 54)',
+                items: [
+                    {
+                        name: "Dengan Isipadu (Charles's Law)",
+                        equation: "V₁/T₁ = V₂/T₂",
+                        description: "Suhu dan isipadu adalah terus berkadaran pada tekanan malar"
+                    },
+                    {
+                        name: "Dengan Tekanan (Gay-Lussac's Law)",
+                        equation: "P₁/T₁ = P₂/T₂",
+                        description: "Suhu dan tekanan adalah terus berkadaran pada isipadu malar"
+                    }
+                ],
+                showGraph: false
+            },
+            boyle: {
+                title: "Boyle's Law - Inverse P-V Relation",
+                color: 'rgb(195, 220, 90)',
+                items: [
+                    {
+                        name: "Formula Asas",
+                        equation: "P₁V₁ = P₂V₂",
+                        description: "Pada suhu malar (T = constant)"
+                    },
+                    {
+                        name: "Bentuk Pemalar",
+                        equation: "PV = k",
+                        description: "Tekanan × Isipadu = Pemalar"
+                    },
+                    {
+                        name: "Hubungan Songsang",
+                        equation: "P ∝ 1/V",
+                        description: "Bila tekanan naik, isipadu turun (inverse relationship)"
+                    }
+                ],
+                showGraph: true,
+                graphType: 'inverse',
+                xLabel: 'Volume (V)',
+                yLabel: 'Pressure (P)',
+                xUnit: 'L',
+                yUnit: 'atm',
+                constant: 'PV = k'
+            },
+            charles: {
+                title: "Charles's Law - Direct V-T Relation",
+                color: 'rgb(255, 200, 80)',
+                items: [
+                    {
+                        name: "Formula Asas",
+                        equation: "V₁/T₁ = V₂/T₂",
+                        description: "Pada tekanan malar (P = constant)"
+                    },
+                    {
+                        name: "Bentuk Pemalar",
+                        equation: "V/T = k",
+                        description: "Isipadu ÷ Suhu = Pemalar"
+                    },
+                    {
+                        name: "Hubungan Terus",
+                        equation: "V ∝ T",
+                        description: "Bila suhu naik, isipadu naik (direct relationship)"
+                    }
+                ],
+                showGraph: true,
+                graphType: 'direct',
+                xLabel: 'Temperature (T)',
+                yLabel: 'Volume (V)',
+                xUnit: 'K',
+                yUnit: 'L',
+                constant: 'V/T = k'
+            },
+            'gay-lussac': {
+                title: "Gay-Lussac's Law - Direct P-T Relation",
+                color: 'rgb(190, 120, 200)',
+                items: [
+                    {
+                        name: "Formula Asas",
+                        equation: "P₁/T₁ = P₂/T₂",
+                        description: "Pada isipadu malar (V = constant)"
+                    },
+                    {
+                        name: "Bentuk Pemalar",
+                        equation: "P/T = k",
+                        description: "Tekanan ÷ Suhu = Pemalar"
+                    },
+                    {
+                        name: "Hubungan Terus",
+                        equation: "P ∝ T",
+                        description: "Bila suhu naik, tekanan naik (direct relationship)"
+                    }
+                ],
+                showGraph: true,
+                graphType: 'direct',
+                xLabel: 'Temperature (T)',
+                yLabel: 'Pressure (P)',
+                xUnit: 'K',
+                yUnit: 'atm',
+                constant: 'P/T = k'
+            }
+        };
+
+        allClickable.forEach(element => {
+            element.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const varType = this.dataset.var;
+                
+                if (activeElement === this) {
+                    resetView();
+                    return;
+                }
+                
+                activeElement = this;
+                
+                allClickable.forEach(el => {
+                    el.classList.remove('active', 'dimmed');
+                    if (el !== this) el.classList.add('dimmed');
+                });
+                
+                this.classList.add('active');
+                
+                const allParticles = particles.querySelectorAll('.particle');
+                if (varType === 'temperature') {
+                    allParticles.forEach(p => p.classList.add('fast'));
+                } else {
+                    allParticles.forEach(p => p.classList.remove('fast'));
+                }
+                
+                showFormulas(varType);
+            });
+        });
+
+        function showFormulas(type) {
+            const data = formulas[type];
+            if (!data) return;
+            
+            let html = `<div class="formula-title">${data.title}</div>`;
+            
+            data.items.forEach(item => {
+                html += `
+                    <div class="formula-item" style="border-left-color: ${data.color}">
+                        <div class="formula-name">${item.name}</div>
+                        <div class="formula-equation">${item.equation}</div>
+                        <div class="formula-description">${item.description}</div>
+                    </div>
+                `;
+            });
+            
+            // Add graph if applicable
+            if (data.showGraph) {
+                html += `
+                    <div class="graph-container fade-in">
+                        <div class="graph-title">Graf Hubungan: ${data.xLabel} vs ${data.yLabel}</div>
+                        <svg class="graph-svg" viewBox="0 0 360 200">
+                            ${generateGraph(data.graphType, data.color, data.xLabel, data.yLabel, data.xUnit, data.yUnit)}
+                        </svg>
+                        <div style="text-align: center; margin-top: 8px; font-size: 13px; color: #666;">
+                            Pemalar: <strong>${data.constant}</strong>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            popup.innerHTML = html;
+            popup.classList.add('show');
+            
+            const containerRect = document.querySelector('.container').getBoundingClientRect();
+            popup.style.left = (containerRect.left + containerRect.width / 2 - 210) + 'px';
+            popup.style.top = (containerRect.bottom - 450) + 'px';
+        }
+
+        function generateGraph(type, color, xLabel, yLabel) {
+            let pathData = '';
+            
+            if (type === 'inverse') {
+                // Inverse relationship (hyperbola) for Boyle's Law - smoother curve
+                // Points calculated using y = k/x relationship
+                const points = [];
+                for (let x = 50; x <= 340; x += 10) {
+                    const y = 180 - (8000 / (x + 10)); // Inverse relationship
+                    points.push(`${x},${y}`);
+                }
+                pathData = 'M ' + points.join(' L ');
+            } else {
+                // Direct relationship (linear) for Charles's and Gay-Lussac's Law
+                pathData = 'M 50 170 L 340 30';
+            }
+            
+            return `
+                <!-- Axes -->
+                <line x1="40" y1="180" x2="340" y2="180" stroke="#333" stroke-width="2"/>
+                <line x1="40" y1="180" x2="40" y2="20" stroke="#333" stroke-width="2"/>
+                
+                <!-- Arrows -->
+                <polygon points="340,180 335,177 335,183" fill="#333"/>
+                <polygon points="40,20 37,25 43,25" fill="#333"/>
+                
+                <!-- Grid lines -->
+                <line x1="40" y1="140" x2="340" y2="140" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5"/>
+                <line x1="40" y1="100" x2="340" y2="100" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5"/>
+                <line x1="40" y1="60" x2="340" y2="60" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5"/>
+                
+                <line x1="100" y1="20" x2="100" y2="180" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5"/>
+                <line x1="160" y1="20" x2="160" y2="180" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5"/>
+                <line x1="220" y1="20" x2="220" y2="180" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5"/>
+                <line x1="280" y1="20" x2="280" y2="180" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5"/>
+                
+                <!-- Graph line -->
+                <path d="${pathData}" stroke="${color}" stroke-width="4" fill="none"/>
+                
+                <!-- Labels -->
+                <text x="190" y="198" font-size="12" text-anchor="middle" fill="#333">${xLabel}</text>
+                <text x="25" y="100" font-size="12" text-anchor="middle" fill="#333" transform="rotate(-90 25 100)">${yLabel}</text>
+                
+                <!-- Relationship indicator -->
+                ${type === 'inverse' ? 
+                    '<text x="280" y="160" font-size="11" fill="#666">P ∝ 1/V</text>' : 
+                    '<text x="280" y="50" font-size="11" fill="#666">Hubungan Terus</text>'}
+            `;
+        }
+
+        function resetView() {
+            activeElement = null;
+            allClickable.forEach(el => el.classList.remove('active', 'dimmed'));
+            popup.classList.remove('show');
+            particles.querySelectorAll('.particle').forEach(p => p.classList.remove('fast'));
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.hex-element') && 
+                !e.target.closest('.intersection-text') && 
+                !e.target.closest('.formula-popup')) {
+                resetView();
+            }
+        });
+    </script>
+</body>
+</html>
